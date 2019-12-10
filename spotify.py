@@ -6,6 +6,7 @@ import spotipy
 import sys
 import spotipy.util as util
 import sqlite3
+from random_word import RandomWords
 
 
 token = util.oauth2.SpotifyClientCredentials(client_id = '1ad705cfee3548b9950efb26b457a33e', client_secret = '3a4c9fe4f00542d9816b25148a035664')
@@ -25,34 +26,7 @@ url = "https://api.spotify.com/v1/search"
 scope = 'user-library-read'
 
 
-def read_cache(CACHE_FNAME):
-    """
-    This function reads from the JSON cache file and returns a dictionary from the cache data. 
-    If the file doesn’t exist, it returns an empty dictionary.
-    """
 
-    try:
-        cache_file = open(CACHE_FNAME, 'r', encoding="utf-8") # Try to read the data from the file
-        cache_contents = cache_file.read()  # If it's there, get it into a string
-        CACHE_DICTION = json.loads(cache_contents) # And then load it into a dictionary
-        cache_file.close() # Close the file, we're good, we got the data in a dictionary.
-    except:
-        CACHE_DICTION = {}
-    
-    return CACHE_DICTION
-
-def write_cache(CACHE_FNAME, cache_dict):
-    """
-    This function encodes the cache dictionary (cache_dict) into JSON format and
-    writes the contents in the cache file (cache_file) to save the search results.
-    """
-    pass
-    cd = json.dumps(cache_dict)
-    
-    cf = open(CACHE_FNAME, "w")
-    cf.write(cd)
-    cf.close()
-    print(cf)
 
 
 #function that uses api to get key word
@@ -62,90 +36,110 @@ def write_cache(CACHE_FNAME, cache_dict):
 #song table plugin id and title
 # if sia ID is 2 in song table, then you can trace it back to song table, and then get artist
 
-def get_songs(keyword):
-    
-    if len(sys.argv) > 1:
-        search_str = sys.argv[1]
-    else:
-        search_str = keyword
 
-    result = spotify.search(search_str)
-    titles = []
-    items =  result['tracks']['items']
-    for item in items:
-        titles.append(item['name'])
-    return titles
-
-def get_artists(keyword):
-    
-    if len(sys.argv) > 1:
-        search_str = sys.argv[1]
-    else:
-        search_str = keyword
-
-    result = spotify.search(search_str)
-    artists = []
-    items =  result['tracks']['items']
-    for item in items:
-        artists.append(item['artists'][0]['name'])
-    return artists
-
-def write_title_table(db_filename):
-    
-    conn = sqlite3.connect(db_filename)
+def connectDatabase(db_name):
+    # connect to database
+    path = os.path.dirname(os.path.abspath(__file__))
+    conn = sqlite3.connect(path+'/'+db_name)
     cur = conn.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS Spotify (Title TEXT, Artist TEXT, artist_id INT)")
+    return cur, conn
 
 
-def insert_title_table(db_filename):
-    conn = sqlite3.connect(db_filename)
-    cur = conn.cursor()
-    songs = get_songs('word')
-
-    for song in songs:
-        cur.execute("INSERT INTO Spotify(Title) VALUES(?)",song)
+def write_song_table(db_filename, cur, conn):
+    
+    cur.execute("CREATE TABLE IF NOT EXISTS Songs (id INTEGER PRIMARY KEY, Title TEXT, word TEXT)")
     conn.commit()
+
+def write_artist_table(db_filename, cur, conn):
     
+    cur.execute("CREATE TABLE IF NOT EXISTS Artists (id INTEGER PRIMARY KEY, Artist TEXT, UNIQUE (id))")
+    conn.commit()
+
+def update_songs():
+    #get a random word from rand word generator
+    r = RandomWords()
+    rw = r.get_random_word()
+
+    #plug word into spotify and get list of songs
+    return rw
+    
+    #return rand_songs
+    #call the table functions
 
 
-def write_id_table(db_filename):
+def get_artists(keyword, cur, conn):
     
-    conn = sqlite3.connect(db_filename)
-    cur = conn.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS Artists (Artist TEXT, artist_id INT)")
- 
+    if len(sys.argv) > 1:
+        search_str = sys.argv[1]
+    else:
+        search_str = keyword
+
+    result = spotify.search(search_str)
+
+    items =  result['tracks']['items']
+    artist_id = 0
+    
+    for item in items:
+        artist = item['artists'][0]['name']
+        artist_id += 1
+   #try:
+        cur.execute("INSERT OR IGNORE INTO Artists (id, Artist) VALUES (?,?)",(artist_id,artist))
+        #except:
+    #        print("failed")
+
+    conn.commit()
+
+
+
+
+
+
+
+#songs and artists(3 tables)
+
+
+
 #function that updates table with 20
 
-#------------------------------------------------------------------------------------------
 
+
+
+#------------------------------------------------------------------------------------------
 def main():
     
     # Get the cached data for BRA
-    print("This should use the cache")
-    songs = get_songs('word')
-    artists = get_artists('word')
-    print(songs)
-    print(artists)
+    
+    (cur, conn) = connectDatabase('spo.db')
+    
+    
+    write_song_table('spo.db', cur, conn)  
+    write_artist_table('spo.db', cur, conn)  
+    
+    keyword = update_songs()
+
+    get_artists(keyword, cur, conn)
+    #get_songs(keyword, cur, conn)
+    
+    
+    #songs = get_songs(word)
+    #artists = get_artists(word)
+    #print(songs)
+    #print(artists)
     
     print("------------")
-
-    print("CACHING")
-    CACHE_FNAME = 'cache_tracks.json' 
-    cache_dictionary = read_cache(CACHE_FNAME)
-    write_cache(CACHE_FNAME, songs)
-    write_cache(CACHE_FNAME, artists)
-
-    write_title_table('songs.db')
-    insert_title_table('songs.db')
-    write_id_table('songs.db')
  
-
     # You can comment this out to test with just the main, but be sure to uncomment it and test
     # with unittest as well.
     unittest.main(verbosity=2)
     print("------------")
+    
+
+
 
 
 if __name__ == "__main__":
     main()
 
+    #in song table have another column with the word given from 
+    #pass it into update song table
+    #put that in
