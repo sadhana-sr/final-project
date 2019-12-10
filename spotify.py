@@ -52,7 +52,7 @@ def write_song_table(db_filename, cur, conn):
 
 def write_artist_table(db_filename, cur, conn):
     
-    cur.execute("CREATE TABLE IF NOT EXISTS Artists (id INTEGER PRIMARY KEY, Artist TEXT, UNIQUE (id))")
+    cur.execute("CREATE TABLE IF NOT EXISTS Artists (id INTEGER PRIMARY KEY, Artist TEXT)")
     conn.commit()
 
 def update_songs():
