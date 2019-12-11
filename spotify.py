@@ -47,7 +47,7 @@ def connectDatabase(db_name):
 
 def write_song_table(db_filename, cur, conn):
     
-    cur.execute("CREATE TABLE IF NOT EXISTS Songs (id INTEGER PRIMARY KEY, Title TEXT, word TEXT, artist TEXT)")
+    cur.execute("CREATE TABLE IF NOT EXISTS Songs (id INTEGER PRIMARY KEY, Title TEXT, word TEXT, artist_id INTEGER)")
     conn.commit()
 
 def write_artist_table(db_filename, cur, conn):
@@ -109,11 +109,11 @@ def get_songs(keyword, cur, conn):
         song_id += 1
         artist = item['artists'][0]['name']
         artist_id += 1
-        cur.execute('INSERT OR IGNORE INTO Songs(id, Title, word, artist ) VALUES(?,?,?,?)', (song_id, title, keyword, artist ))
+        cur.execute('INSERT OR IGNORE INTO Songs(id, Title, word, artist_id ) VALUES(?,?,?,?)', (song_id, title, keyword, artist_id ))
 
     conn.commit()
 
-    cur.execute('SELECT Artists.Artist, Songs.Title FROM Artists JOIN Songs ON Songs.artist = Artists.artist_id WHERE Songs.artist = ?', (artist_id,))
+    cur.execute('SELECT Artists.Artist, Songs.Title FROM Artists JOIN Songs ON Songs.artist_id = Artists.artist_id WHERE Songs.artist_id = ?', (artist,))
 
     conn.commit()
 
