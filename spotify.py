@@ -107,17 +107,16 @@ def get_songs(keyword, cur, conn):
     songs_list = []
     table_list = []
     for item in items:
-        title = item['name']
-        songs_list.append(title)
-
         count = 0
         cur.execute('SELECT * FROM Songs')
+        title = item['name']
+        songs_list.append(title)
+        artist_id = count + 1
         for row in cur:
             count += 1
             table_list.append(row[1])
 
 
-            artist_id = count + 1
             if title not in table_list:
                 artist_id = cur.execute('SELECT artist_id FROM Artists WHERE title = ?', (title, ))
 
