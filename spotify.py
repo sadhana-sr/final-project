@@ -55,19 +55,6 @@ def write_artist_table(db_filename, cur, conn):
     cur.execute("CREATE TABLE IF NOT EXISTS Artists (artist_id INTEGER PRIMARY KEY, Artist TEXT)")
     conn.commit()
 
-
-def update_songs():
-    #get a random word from rand word generator
-    r = RandomWords()
-    rw = r.get_random_word()
-
-    #plug word into spotify and get list of songs
-    return rw
-    
-    #return rand_songs
-    #call the table functions
-
-
 def get_artists(keyword, cur, conn):
     
     if len(sys.argv) > 1:
@@ -75,16 +62,32 @@ def get_artists(keyword, cur, conn):
     else:
         search_str = keyword
 
-    result = spotify.search(search_str, limit=1)
+    result = spotify.search(search_str, limit=2)
+    
 
     items =  result['tracks']['items']
+
     artist_id = 0
-    
+    artist_list = []
+    table_list = []
     for item in items:
         artist = item['artists'][0]['name']
-        artist_id += 1
+        
+        artist_list.append(artist)
+
+
+
+    count = 0
+    cur.execute('SELECT * FROM Artists')
+    for row in cur:
+        count += 1
+        table_list.append(row[1])
+
+        artist_id = count + 1
+        if artist not in table_list:
+
    #try:
-        cur.execute("INSERT OR IGNORE INTO Artists (artist_id, Artist) VALUES (?,?)",(artist_id,artist))
+            cur.execute("INSERT OR IGNORE INTO Artists (artist_id, Artist) VALUES (?,?)",(artist_id,artist))
         #except:
     #        print("failed")
         #cur.execute('SELECT Artists.Artist, Songs.Title FROM Artists JOIN Songs ON Artists.artist_id = Songs.artist_id WHERE Songs.artist_id = (?)', (artist_id, ))
@@ -98,7 +101,7 @@ def get_songs(keyword, cur, conn):
     else:
         search_str = keyword
 
-    result = spotify.search(search_str, limit=1)
+    result = spotify.search(search_str, limit=2)
 
     items =  result['tracks']['items']
     song_id = 0
@@ -111,11 +114,23 @@ def get_songs(keyword, cur, conn):
         artist = item['artists'][0]['name']
         artist_id += 1
         cur.execute('INSERT OR IGNORE INTO Songs(id, Title, word, artist_id ) VALUES(?,?,?,?)', (song_id, title, keyword, artist_id ))
-
         cur.execute('SELECT Artists.Artist, Songs.Title FROM Artists INNER JOIN Songs ON Songs.artist_id = Artists.artist_id WHERE Songs.artist_id = ?', (artist_id,))
 
+        
     conn.commit()
    
+
+def update_songs(cur, conn):
+    #get a random word from rand word generator
+    r = RandomWords()
+    rw = r.get_random_word()
+
+    #plug word into spotify and get list of songs
+    get_artists(rw, cur, conn)
+    get_songs(rw, cur, conn)
+    
+    #return rand_songs
+    #call the table functions
 
     
 
@@ -133,18 +148,16 @@ def get_songs(keyword, cur, conn):
 def main():
     
     # Get the cached data for BRA
-    keyword = update_songs()
+    
     
     (cur, conn) = connectDatabase('spo.db')
-    
-    
+
     write_song_table('spo.db', cur, conn)  
     write_artist_table('spo.db', cur, conn)  
     
-    print(keyword)
+    update_songs(cur, conn)
     
-    get_artists(keyword, cur, conn)
-    get_songs(keyword, cur, conn)
+
 
     #print("Here are our recommended songs:")
     #s = get_songs(keyword, cur, conn)
