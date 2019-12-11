@@ -67,7 +67,6 @@ def get_artists(keyword, cur, conn):
 
     items =  result['tracks']['items']
 
-    artist_id = 0
     artist_list = []
     table_list = []
     for item in items:
