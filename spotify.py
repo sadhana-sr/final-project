@@ -113,7 +113,7 @@ def get_songs(keyword, cur, conn):
 
     conn.commit()
 
-    cur.execute('SELECT Artists.Artist, Songs.Title FROM Artists JOIN Songs ON Songs.artist_id = Artists.artist_id WHERE Songs.artist_id = ?', (artist,))
+    cur.execute('SELECT Artists.Artist, Songs.Title FROM Artists JOIN Songs ON Songs.artist_id = Artists.artist_id WHERE Songs.artist_id = ?', (artist_id,))
 
     conn.commit()
 
