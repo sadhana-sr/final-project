@@ -47,13 +47,19 @@ def connectDatabase(db_name):
 
 def write_song_table(db_filename, cur, conn):
     
-    cur.execute("CREATE TABLE IF NOT EXISTS Songs (id INTEGER PRIMARY KEY, Title TEXT, word TEXT)")
+    cur.execute("CREATE TABLE IF NOT EXISTS Songs (id INTEGER PRIMARY KEY, Title TEXT, word TEXT, artist_id INTEGER)")
     conn.commit()
 
 def write_artist_table(db_filename, cur, conn):
     
-    cur.execute("CREATE TABLE IF NOT EXISTS Artists (id INTEGER PRIMARY KEY, Artist TEXT)")
+    cur.execute("CREATE TABLE IF NOT EXISTS Artists (artist_id INTEGER PRIMARY KEY, Artist TEXT)")
     conn.commit()
+
+def write_songartist_table(db_filename, cur, conn):
+    
+    cur.execute("CREATE TABLE IF NOT EXISTS SongsAndArtists (Title TEXT, Artist TEXT)")
+    conn.commit()
+
 
 def update_songs():
     #get a random word from rand word generator
@@ -83,14 +89,40 @@ def get_artists(keyword, cur, conn):
         artist = item['artists'][0]['name']
         artist_id += 1
    #try:
-        cur.execute("INSERT OR IGNORE INTO Artists (id, Artist) VALUES (?,?)",(artist_id,artist))
+        cur.execute("INSERT OR IGNORE INTO Artists (artist_id, Artist) VALUES (?,?)",(artist_id,artist))
         #except:
     #        print("failed")
 
     conn.commit()
 
+def get_songs(keyword, cur, conn):
+    
+    if len(sys.argv) > 1:
+        search_str = sys.argv[1]
+    else:
+        search_str = keyword
+
+    result = spotify.search(search_str)
+
+    items =  result['tracks']['items']
+    song_id = 0
+  
+    for item in items:
+        title = item['name']
+        song_id += 1
+        cur.execute('INSERT OR IGNORE INTO Songs(id, Title, word ) VALUES(?,?,?)', (song_id, title, keyword ))
+
+        cur.execute('SELECT * FROM Artists JOIN Songs ON Artists.artist_id = Songs.artist_id')
+
+    conn.commit()
 
 
+def get_songs_artists(keyword, cur, conn):
+    
+    #cur.execute('INSERT INTO SongsAndArtists (Title,Artist) SELECT Title,Artist FROM Songs,Artists')
+    #cur.execute('INSERT INTO SongsAndArtists (Artist) SELECT Artist FROM Artists')
+    #cur.execute('SELECT Title FROM Songs FULL JOIN SongsAndArtists ON Songs.Title = SongsAndArtists.Title')
+    conn.commit()
 
 
 
@@ -114,12 +146,14 @@ def main():
     
     write_song_table('spo.db', cur, conn)  
     write_artist_table('spo.db', cur, conn)  
+    write_songartist_table('spo.db', cur, conn)
     
     keyword = update_songs()
-
+    print(keyword)
     get_artists(keyword, cur, conn)
-    #get_songs(keyword, cur, conn)
-    
+    get_songs(keyword, cur, conn)
+    get_songs_artists(keyword, cur, conn)
+
     
     #songs = get_songs(word)
     #artists = get_artists(word)
