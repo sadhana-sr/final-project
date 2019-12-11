@@ -75,7 +75,7 @@ def get_artists(keyword, cur, conn):
     else:
         search_str = keyword
 
-    result = spotify.search(search_str, limit=4)
+    result = spotify.search(search_str, limit=1)
 
     items =  result['tracks']['items']
     artist_id = 0
@@ -98,25 +98,28 @@ def get_songs(keyword, cur, conn):
     else:
         search_str = keyword
 
-    result = spotify.search(search_str, limit=4)
+    result = spotify.search(search_str, limit=1)
 
     items =  result['tracks']['items']
     song_id = 0
     artist_id = 0
-
+    songs = []
     for item in items:
         title = item['name']
         song_id += 1
+        
         artist = item['artists'][0]['name']
         artist_id += 1
         cur.execute('INSERT OR IGNORE INTO Songs(id, Title, word, artist_id ) VALUES(?,?,?,?)', (song_id, title, keyword, artist_id ))
 
         cur.execute('SELECT Artists.Artist, Songs.Title FROM Artists INNER JOIN Songs ON Songs.artist_id = Artists.artist_id WHERE Songs.artist_id = ?', (artist_id,))
-
+        for row in cur:
+            songs.append(row)
+    return songs
     conn.commit()
+   
 
-
-
+    
 
 
 #songs and artists(3 tables)
@@ -132,7 +135,7 @@ def get_songs(keyword, cur, conn):
 def main():
     
     # Get the cached data for BRA
-    keyword = update_songs()
+    keyword = 'ok'
     (cur, conn) = connectDatabase('spo.db')
     
     
@@ -144,8 +147,13 @@ def main():
     get_artists(keyword, cur, conn)
     get_songs(keyword, cur, conn)
 
-    
-    
+    print("Here are our recommended songs:")
+    s = get_songs(keyword, cur, conn)
+    for i in s:
+        print(i[1] + " by " + i[0])
+
+
+
     #songs = get_songs(word)
     #artists = get_artists(word)
     #print(songs)
