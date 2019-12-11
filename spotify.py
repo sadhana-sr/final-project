@@ -107,6 +107,8 @@ def get_songs(keyword, cur, conn):
     songs_list = []
     table_list = []
     for item in items:
+
+
         count = 0
         cur.execute('SELECT * FROM Songs')
         title = item['name']
@@ -118,7 +120,7 @@ def get_songs(keyword, cur, conn):
 
 
             if title not in table_list:
-                artist_id = cur.execute('SELECT artist_id FROM Artists WHERE title = ?', (title, ))
+                artist_id = cur.execute('SELECT artist_id FROM Artists')
 
                 cur.execute('INSERT OR IGNORE INTO Songs(id, Title, word, artist_id ) VALUES(?,?,?,?)', (song_id, title, keyword, artist_id ))
                 cur.execute('SELECT Artists.Artist, Songs.Title FROM Artists INNER JOIN Songs ON Songs.artist_id = Artists.artist_id WHERE Songs.artist_id = ?', (artist_id,))
