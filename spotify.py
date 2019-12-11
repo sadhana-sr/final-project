@@ -61,12 +61,11 @@ def get_artists(keyword, cur, conn):
         search_str = sys.argv[1]
     else:
         search_str = keyword
-
-    result = spotify.search(search_str, limit=2)
     
+    result = spotify.search(search_str, limit=2)
 
     items =  result['tracks']['items']
-
+    
     #artist_id = 0
     artist_list = []
     table_list = []
@@ -77,6 +76,7 @@ def get_artists(keyword, cur, conn):
 
         count = 0
         cur.execute('SELECT * FROM Artists')
+        
         for row in cur:
             count += 1
             table_list.append(row[1])
