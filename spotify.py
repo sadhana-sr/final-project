@@ -47,17 +47,12 @@ def connectDatabase(db_name):
 
 def write_song_table(db_filename, cur, conn):
     
-    cur.execute("CREATE TABLE IF NOT EXISTS Songs (id INTEGER PRIMARY KEY, Title TEXT, word TEXT, artist_id INTEGER)")
+    cur.execute("CREATE TABLE IF NOT EXISTS Songs (id INTEGER PRIMARY KEY, Title TEXT, word TEXT, artist TEXT)")
     conn.commit()
 
 def write_artist_table(db_filename, cur, conn):
     
     cur.execute("CREATE TABLE IF NOT EXISTS Artists (artist_id INTEGER PRIMARY KEY, Artist TEXT)")
-    conn.commit()
-
-def write_songartist_table(db_filename, cur, conn):
-    
-    cur.execute("CREATE TABLE IF NOT EXISTS SongsAndArtists (Title TEXT, Artist TEXT)")
     conn.commit()
 
 
@@ -92,8 +87,9 @@ def get_artists(keyword, cur, conn):
         cur.execute("INSERT OR IGNORE INTO Artists (artist_id, Artist) VALUES (?,?)",(artist_id,artist))
         #except:
     #        print("failed")
+        #cur.execute('SELECT Artists.Artist, Songs.Title FROM Artists JOIN Songs ON Artists.artist_id = Songs.artist_id WHERE Songs.artist_id = (?)', (artist_id, ))
 
-    conn.commit()
+    conn.commit() 
 
 def get_songs(keyword, cur, conn):
     
@@ -106,23 +102,21 @@ def get_songs(keyword, cur, conn):
 
     items =  result['tracks']['items']
     song_id = 0
-  
+    artist_id = 0
+
     for item in items:
         title = item['name']
         song_id += 1
-        cur.execute('INSERT OR IGNORE INTO Songs(id, Title, word ) VALUES(?,?,?)', (song_id, title, keyword ))
-
-        cur.execute('SELECT * FROM Artists JOIN Songs ON Artists.artist_id = Songs.artist_id')
+        artist = item['artists'][0]['name']
+        artist_id += 1
+        cur.execute('INSERT OR IGNORE INTO Songs(id, Title, word, artist ) VALUES(?,?,?,?)', (song_id, title, keyword, artist ))
 
     conn.commit()
 
+    cur.execute('SELECT Artists.Artist, Songs.Title FROM Artists JOIN Songs ON Songs.artist = Artists.artist_id WHERE Songs.artist = ?', (artist_id,))
 
-def get_songs_artists(keyword, cur, conn):
-    
-    #cur.execute('INSERT INTO SongsAndArtists (Title,Artist) SELECT Title,Artist FROM Songs,Artists')
-    #cur.execute('INSERT INTO SongsAndArtists (Artist) SELECT Artist FROM Artists')
-    #cur.execute('SELECT Title FROM Songs FULL JOIN SongsAndArtists ON Songs.Title = SongsAndArtists.Title')
     conn.commit()
+
 
 
 
@@ -146,13 +140,12 @@ def main():
     
     write_song_table('spo.db', cur, conn)  
     write_artist_table('spo.db', cur, conn)  
-    write_songartist_table('spo.db', cur, conn)
     
     keyword = update_songs()
     print(keyword)
     get_artists(keyword, cur, conn)
     get_songs(keyword, cur, conn)
-    get_songs_artists(keyword, cur, conn)
+
 
     
     #songs = get_songs(word)
