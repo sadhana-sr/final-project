@@ -113,9 +113,7 @@ def get_songs(keyword, cur, conn):
         cur.execute('INSERT OR IGNORE INTO Songs(id, Title, word, artist_id ) VALUES(?,?,?,?)', (song_id, title, keyword, artist_id ))
 
         cur.execute('SELECT Artists.Artist, Songs.Title FROM Artists INNER JOIN Songs ON Songs.artist_id = Artists.artist_id WHERE Songs.artist_id = ?', (artist_id,))
-        for row in cur:
-            songs.append(row)
-    return songs
+
     conn.commit()
    
 
@@ -135,7 +133,8 @@ def get_songs(keyword, cur, conn):
 def main():
     
     # Get the cached data for BRA
-    keyword = 'ok'
+    keyword = update_songs()
+    
     (cur, conn) = connectDatabase('spo.db')
     
     
@@ -147,10 +146,10 @@ def main():
     get_artists(keyword, cur, conn)
     get_songs(keyword, cur, conn)
 
-    print("Here are our recommended songs:")
-    s = get_songs(keyword, cur, conn)
-    for i in s:
-        print(i[1] + " by " + i[0])
+    #print("Here are our recommended songs:")
+    #s = get_songs(keyword, cur, conn)
+    #for i in s:
+     #   print(i[1] + " by " + i[0])
 
 
 
