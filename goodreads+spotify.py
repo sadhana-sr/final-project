@@ -6,7 +6,7 @@ import sqlite3
 import os
 import random
 import xml.etree.ElementTree as ET
-import time
+
 import spotipy
 import sys
 from random_word import RandomWords
@@ -35,122 +35,142 @@ def connectDatabase(db_name):
 
 
 def update_books(cur, conn):
-    '''This function grabs 20 book titles and authors from NYT API and adds it to the cache.
+    '''This function grabs a random book from a random NYT best sellers list.
         Then it adds it to the Books table in the database'''
 
     key_word_entries = 0
     book_entries = 0
 
-    
-    key = 'LULfKyQLZp6nERnrISvzNj732a3fX3te'
-    request_url = "https://api.nytimes.com/svc/books/v3/lists/names.json?api-key=LULfKyQLZp6nERnrISvzNj732a3fX3te"
-    #send request to API and get response (a string)
-    response = requests.get(request_url)
-    x = json.loads(response.text)
-    #get the array of dictionaries
-    results = x["results"]
+    ok_to_go = False
 
 
-    
-    num_data = 0
+    ''' lists/names service returns a list of all the NYT Best Sellers Lists '''
 
-    len_results = len(results)
-    random_list = random.randrange(0, len_results)
     
-    #pick one random list
-    result = results[random_list]
-    lst_name = result['list_name']
-    oldest_date =result['oldest_published_date']
-    split_old = oldest_date.split('-')
-    old_year = split_old[0]
-    newest_date = result['newest_published_date']
-    # generate a random year for date
-    split_new = newest_date.split('-')
-    new_year = split_new[0]
-    if old_year == new_year:
-        year = old_year
-    else:
-        year = random.randrange(int(old_year), int(new_year))
-    date = str(year)+"-05-15"
+    while ok_to_go == False:
+        key = 'LULfKyQLZp6nERnrISvzNj732a3fX3te'
+        request_url = "https://api.nytimes.com/svc/books/v3/lists/names.json?api-key=LULfKyQLZp6nERnrISvzNj732a3fX3te"
+        #send request to API and get response (a string)
+        response = requests.get(request_url)
+        x = json.loads(response.text)
+        #get the array of dictionaries
+        try:
+            results = x["results"]
+        except:
+            continue
+
+
+        len_results = len(results)
+        random_list = random.randrange(0, len_results)
         
-    #get the list data (returns the books on the best sellers list)
-    new_request_url_base = "https://api.nytimes.com/svc/books/v3/lists/{}/{}.json?api-key={}"
-    new_request_url = new_request_url_base.format(date, lst_name, key)
-    response = requests.get(new_request_url)
-    k = json.loads(response.text)
+        #pick one random list category
+        result = results[random_list]
+        lst_name = result['list_name']
+        oldest_date =result['oldest_published_date']
+        split_old = oldest_date.split('-')
+        old_year = split_old[0]
+        newest_date = result['newest_published_date']
+        # generate a random year for date
+        split_new = newest_date.split('-')
+        new_year = split_new[0]
+        if old_year == new_year:
+            year = old_year
+        else:
+            year = random.randrange(int(old_year), int(new_year))
+        date = str(year)+"-05-15"
             
-    #book_results is a dictionary
-    book_results = k['results']
     
-
-    #if no books in list (error)
-    if len(book_results) == 0:
-        #try again
-        update_books(cur, conn)
-
-
-
-
-
-    #books is a list of dictionaries
-    books = book_results["books"]        
-    num_books = 0
-            
-    key_word_entries = 0
-    book_entries = 0
-    while key_word_entries + book_entries < 12:
-        repeat = False
-        book = books[num_books]
-     
-        title = book['title']
-        author = book['author']
-
-        #check to see if book already in table
-        cur.execute('SELECT * FROM Books')
-        for row in cur:
-            #if the book is already in the table, move to the next book
-            if row[1] == title:
-                repeat = True
-                break
-
-        if repeat == True:
-            num_books+=1
-            continue
+        '''The lists/{date}/{name} service returns the books on the best sellers list for the specified date and list name.'''
+    
+        #get the list data (returns the books on the best sellers list)
+        new_request_url_base = "https://api.nytimes.com/svc/books/v3/lists/{}/{}.json?api-key={}"
+        new_request_url = new_request_url_base.format(date, lst_name, key)
+        response = requests.get(new_request_url)
+        k = json.loads(response.text)
                 
-                
-                
-        #get a list of 5 keywords for book
-        keywords = get_book_info_goodreads(title, author)
-                
-                
-                
-        if keywords == -1:
-            num_books += 1
-            continue
-        if len(keywords) < 5:
-            num_books += 1
-            continue
-
+        #book_results is a dictionary
+        book_results = k['results']
         
-        #add the list of keywords to the keywords table
-        add_to_key_words_table(keywords, cur, conn)
-        key_word_entries += 5
-                
-                
-               
+        ''' check the validity of the books'''
+        #if no books in list (error)
+        if len(book_results) == 0:
+            #try again
+            continue
 
-        #add book title, author, and 6 keyword ids to book table
-        add_to_books_table(title, author, keywords, cur, conn)
-        book_entries += 1
 
-        #checks if we reached 18 entries. If we did, returns to main. If not, move onto the next book
-        #if key_word_entries + book_entries == 18:
-            #print(key_word_entries + book_entries)
-            #print("Finished")
-            #return
-        #else:
-        num_books += 1
-    print(key_word_entries+book_entries)
+        #check if book_results is a list. If it is, try again.
+        if type(book_results) is list: 
+            continue
+
+        ''' ok to go'''
+        ok_to_go = True
+        
+        
+        #books is a list of dictionaries
+        books = book_results["books"]        
+        num_books = 0
+        
+                
+        key_word_entries = 0
+        book_entries = 0
+        
+        
+        
+        while key_word_entries + book_entries < 6:
+            repeat = False
+            book = books[num_books]
+        
+            title = book['title']
+            author = book['author']
+
+            #check to see if book already in table
+            cur.execute('SELECT * FROM Books')
+            for row in cur:
+                #if the book is already in the table, move to the next book
+                if row[1] == title:
+                    repeat = True
+                    break
+
+            if repeat == True:
+                num_books+=1
+                continue
+                    
+                    
+                    
+            #get a list of 5 keywords for book
+            keywords = get_book_info_goodreads(title, author)
+                    
+                    
+                    
+            if keywords == -1:
+                num_books += 1
+                continue
+            if len(keywords) < 5:
+                num_books += 1
+                continue
+
+            
+            #add the list of keywords to the keywords table
+            add_to_key_words_table(keywords, cur, conn)
+            key_word_entries += 5
+                    
+                    
+                
+
+            #add book title, author, and 6 keyword ids to book table
+            add_to_books_table(title, author, keywords, cur, conn)
+            book_entries += 1
+
+            #checks if we reached 18 entries. If we did, returns to main. If not, move onto the next book
+            #if key_word_entries + book_entries == 18:
+                #print(key_word_entries + book_entries)
+                #print("Finished")
+                #return
+            #else:
+            num_books += 1
+
+        print("number of entries added to database: " + str(key_word_entries+book_entries))
+        return
         
     
 
@@ -425,7 +445,7 @@ def retrieve_kw_ids_from_book_table(title, cur, conn):
             w5 = row[1]
             key_word_lst.append(w5)
          
-    print(key_word_lst)
+
     return key_word_lst
 
 
@@ -461,15 +481,18 @@ def write_artist_table(cur, conn):
 
 
 def update_songs(cur, conn):
-    #get a random word from rand word generator
-    r = RandomWords()
-    rw = r.get_random_word()
+    result = 1
+    while result == -1:
+        #get a random word from rand word generator
+        r = RandomWords()
+        rw = r.get_random_word()
 
-    #plug word into spotify and update tables
-    get_artists(rw, cur, conn)
-    get_songs(rw, cur, conn)
+        #plug word into spotify and update tables
+        result = get_songs(rw, cur, conn)
+    
 
 
+'''
 def get_artists(keyword, cur, conn):
     
     if len(sys.argv) > 1:
@@ -513,42 +536,94 @@ def get_artists(keyword, cur, conn):
     #        print("failed")
         #cur.execute('SELECT Artists.Artist, Songs.Title FROM Artists JOIN Songs ON Artists.artist_id = Songs.artist_id WHERE Songs.artist_id = (?)', (artist_id, ))
 
-    
+'''
 
 
 def get_songs(keyword, cur, conn):
-    
-    if len(sys.argv) > 1:
-        search_str = sys.argv[1]
-    else:
-        search_str = keyword
+    '''this function receives a keyword and returns a song title and artist associated with the keyword'''
 
-    result = spotify.search(search_str, limit=2)
 
-    items =  result['tracks']['items']
-    song_id = 0
+    ''' check if keyword is already included in the songs table. If it is, simply pick an existing song associated with the keyword and return it'''
+    found = False
+    title = ''
     artist_id = 0
-    songs_list = []
-    count = 0
-    
-    
-   
+    artist = ''
+    title_artist = []
+    cur.execute('SELECT * FROM Songs')
+    for row in cur:
+        if row[2] == keyword:
+            found = True
+            print('Retrieving song from database')
+            title = row[1]
+            title_artist.append(title)
 
-    for item in items:
-        table_list = []
+            cur.execute('SELECT Songs.Title, Artists.Artist FROM Artists INNER JOIN Songs ON Songs.artist_id = Artists.artist_id')
+        
+            for row in cur:
+                if title == row[0]:
+                    artist = row[1]
+                    title_artist.append(artist)
+                    break
+
+            return title_artist
+    
+            
+
+
+
+    '''if keyword not found in songs table, need to fetch a new song from spotify and store into'''
+
+    if found == False:
+        print('Retriving a new song from Spotify')
+        if len(sys.argv) > 1:
+            search_str = sys.argv[1]
+        else:
+            search_str = keyword
+
+        #get a list of songs+artists
+        result = spotify.search(search_str, limit=2)
+        
+        
+        
+        '''if no result, return -1'''
+        if len(result) == 0:
+            return -1
+
+
+        items =  result['tracks']['items']
+        #take the first song
+        item = items[0]
+        #get the title and artist
         title = item['name']
-        artist = item['artists'][0]
-        artist = artist['name']
-
+        artist = item['artists'][0]['name']
+        title_artist = [title, artist]
+       
+       
+        ''' store the fetched song into the database'''
+        
+        song_id = 0
+        artist_id = 0
+        table_list = []
         artist_list = []
+        artist_entries = 0
+        song_entries = 0
+
+        #get a list of all the entires in the songs table and store into table_list
         cur.execute('SELECT * FROM Songs')
         for row in cur:
             table_list.append(row[1])
+            
         
+        #the new song's id should be one more than the length of the table_list
         song_id = len(table_list) + 1
-        if title in table_list:
-            continue
+        
+        '''check if the song is already included in the table (The song could be associated with multiple keywords)'''
 
+        #if title is already in the tables, immediately return title_artist
+        if title in table_list:
+            return title_artist
+
+        #if title is not already in the tables, commence with storage process
         else:
 
             #count how many artists are in the table currently
@@ -556,14 +631,14 @@ def get_songs(keyword, cur, conn):
             for row in cur:
                 artist_list.append(row[1])
 
-        
+            
             artist_id = len(artist_list) + 1
 
-        
+            
             if artist not in artist_list:
 
                 cur.execute("INSERT INTO Artists (artist_id, Artist) VALUES (?,?)",(artist_id,artist))
-
+                artist_entries += 1
                 conn.commit() 
 
 
@@ -572,25 +647,26 @@ def get_songs(keyword, cur, conn):
             cur.execute('SELECT artist_id FROM Artists WHERE Artist = ?', (artist, ))
             for row in cur:
                 art_id = int(row[0])
-            
+                
                 artist_ids.append(art_id)
 
 
-           # print(song_id)
-           # print(title)
-            
-            cur.execute('INSERT INTO Songs(id, Title, word, artist_id ) VALUES(?,?,?,?)', (song_id, title, keyword, artist_ids[0]))
             
                 
-            cur.execute('SELECT Songs.Title, Artists.Artist FROM Artists INNER JOIN Songs ON Songs.artist_id = Artists.artist_id WHERE Songs.artist_id = ?', (artist_id,))
+            cur.execute('INSERT INTO Songs(id, Title, word, artist_id ) VALUES(?,?,?,?)', (song_id, title, keyword, artist_ids[0]))
+            song_entries += 1   
+                    
+            #cur.execute('SELECT Songs.Title, Artists.Artist FROM Artists INNER JOIN Songs ON Songs.artist_id = Artists.artist_id WHERE Songs.artist_id = ?', (artist_id,))
 
-                #artist_id += 1
-                #song_id += 1
-            count += 1   
-            if count % 20:
-                time.sleep(5)
+                
+                    
+                    
 
             conn.commit()
+    
+    print('added number of entries: ' + str(song_entries + artist_entries))
+
+    return title_artist
         
    
     
@@ -598,6 +674,16 @@ def get_songs(keyword, cur, conn):
     
         
     
+
+
+
+
+
+
+
+
+
+
 
 
 '///////////////////////////////////////// MAIN //////////////////////////////////////////////////////////'
@@ -615,12 +701,21 @@ def main():
     write_artist_table(cur, conn)
     
 
+    
+
+    
+
+
+
+
+
     #for noun in nouns:
-    #    get_songs(noun, cur, conn)
+        #get_songs(noun, cur, conn)
 
     #update tables
 
-    #update_books(cur, conn)
+   
+    update_books(cur, conn)
 
     #update_songs(cur, conn)
 
@@ -630,40 +725,84 @@ def main():
     #keywords list
     key_words = []
 
-    #songs list
-    songs_list = []
-
-    found = False
-    while found == False:
+    kw_found = False
+    while kw_found == False:
         title = input("Please enter the name of a book: ")
         author = input("Please enter the first and last name of the author of the book: ")
+
         #check if book is in database
         status = check_book_table(title, author, cur, conn)
+
+
+        #if book is in database 
         if status == True:
             print('Fetching from database')
             #get list of keywords
             key_words = retrieve_kw_ids_from_book_table(title, cur, conn)
-        #if not, call via API and store in database
+            print('Keywords: ')
+            print(key_words)
+        
+        
+        #book not in database, call via API and store in database
         else:
             print('Fetching from Goodreads')
             key_words = get_book_info_goodreads(title, author)
             if key_words != -1:
-                found = True
+                kw_found = True
+                print('Keywords: ')
+                print(key_words)
                 #store keywords into table
                 add_to_key_words_table(key_words, cur, conn)
                 add_to_books_table(title.upper(), author, key_words, cur, conn)
                 print('successfully stored into database')
             else:
                 print("Book not found. Please check for any typos in the title and author or enter a new book")
-        #print recommeneded songs
-        for word in key_words:
-            get_songs(word, cur, conn)
-            
+
+
         
-        #print("Here are our recommended songs:")
-        #for song in songs_list:
-            #print(song)
+        
+        missing_song = False
+        song_artist = []
+        print("Here are our recommended songs:")
+        #print recommeneded songs
+        i = 0
+        
+        #try the first 4 of 5 words and get songs
+        while i < len(key_words)-1:
+            song_artist = get_songs(key_words[i], cur, conn)
+            #if we can't find 1 of 4 songs, use the spare (see if statement below)
+            if song_artist == -1:
+                missing_song = True
+                i += 1
+            else:    
+                print(song_artist[0] + ' by: ' + song_artist[1])
+                i += 1
+        
+        #if we can only find 3 out of 4 songs, use the spare 5th word to generate a song
+        if missing_song == True:
+            song_artist = get_songs(key_words[-1], cur, conn)
+            print(song_artist[0] + ' by: ' + song_artist[1])
+
+        
 
 
 if __name__ == "__main__":
     main()
+
+
+    
+    
+
+    
+
+        
+
+    
+
+
+
+
+
+    
+    
+    
