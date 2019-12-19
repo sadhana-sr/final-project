@@ -50,7 +50,6 @@ def second_calc(cur, conn):
     d = {}
     cur.execute('SELECT Books.w_id1, KeyWords.title FROM Books INNER JOIN KeyWords ON Books.w_id1=KeyWords.id') 
     for row in cur:
-        print(row)
         if row[1] not in d:
             d[row[1]] = 1
         else:
@@ -117,11 +116,14 @@ def histogram(cur, conn):
     artists = []
     cur.execute('SELECT Songs.artist_id, Artists.Artist FROM Songs INNER JOIN Artists ON Songs.artist_id = Artists.artist_id')
     for artist_id in cur:
-        artists.append(artist_id[1])
+        artists.append(artist_id[0])
     print(artists)
-    
+
     plt.xticks(rotation=90)
-    plt.hist(artists, rwidth= 1)
+    plt.xlabel('Number of Words')
+    plt.ylabel('Frequency')
+    plt.title('Frequency of Words per Artist')
+    plt.hist(artists, rwidth= 1, color = '#c0f7fa', edgecolor = '#ddcfc1', linewidth = 2)
     plt.show()
 
 
@@ -166,7 +168,7 @@ def main():
     graph_1(x)
     graph_2(y)
     second_calc(cur, conn)
-    #histogram(cur, conn)
+    histogram(cur, conn)
 
 
 
