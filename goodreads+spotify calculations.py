@@ -27,7 +27,9 @@ def connectDatabase(db_name):
     conn = sqlite3.connect(path+'/'+db_name)
     cur = conn.cursor()
     return cur, conn
-def words(cur, conn):
+
+def first_calc(cur, conn):
+#This function calculates out how many words are associated with each artist
     #dictionary of frequency of words
     d = {}
     cur.execute('SELECT Songs.artist_id, Artists.Artist FROM Songs INNER JOIN Artists ON Songs.artist_id = Artists.artist_id')
@@ -43,46 +45,48 @@ def words(cur, conn):
 
 
 def second_calc(cur, conn):
+#This function finds out how many words are associated with how many songs
 
     d = {}
     cur.execute('SELECT Books.w_id1, KeyWords.title FROM Books INNER JOIN KeyWords ON Books.w_id1=KeyWords.id') 
     for row in cur:
-        if row[0] not in d:
-            d[row[0]] = 1
+        print(row)
+        if row[1] not in d:
+            d[row[1]] = 1
         else:
-            d[row[0]] += 1
+            d[row[1]] += 1
 
         #second join
     cur.execute('SELECT Books.w_id2, KeyWords.title FROM Books INNER JOIN KeyWords ON Books.w_id2=KeyWords.id')
     for row in cur:
-        if row[0] not in d:
-            d[row[0]] = 1                
+        if row[1] not in d:
+            d[row[1]] = 1                
         else:
-            d[row[0]] += 1
+            d[row[1]] += 1
 
             
     cur.execute('SELECT Books.w_id3, KeyWords.title FROM Books INNER JOIN KeyWords ON Books.w_id3=KeyWords.id')
     for row in cur:
-        if row[0] not in d:
-            d[row[0]] = 1                
+        if row[1] not in d:
+            d[row[1]] = 1                
         else:
-            d[row[0]] += 1
+            d[row[1]] += 1
 
     cur.execute('SELECT Books.w_id4, KeyWords.title FROM Books INNER JOIN KeyWords ON Books.w_id4=KeyWords.id')
     for row in cur:
-        if row[0] not in d:
-            d[row[0]] = 1            
+        if row[1] not in d:
+            d[row[1]] = 1            
         else:
-            d[row[0]] += 1
+            d[row[1]] += 1
 
     cur.execute('SELECT Books.w_id5, KeyWords.title FROM Books INNER JOIN KeyWords ON Books.w_id5=KeyWords.id')
     for row in cur:
-        if row[0] not in d:
-            d[row[0]] = 1
+        if row[1] not in d:
+            d[row[1]] = 1
         else:
-            d[row[0]] += 1
+            d[row[1]] += 1
 
-    print(d)
+    #print(d)
     return d
 
 
@@ -91,38 +95,58 @@ def graph_1(dictionary):
     pass
 
     
-    print(dictionary)
+    sorted_dictionary = {k: v for k, v in sorted(dictionary.items(), key=lambda item: item[1])}
+    first_thirty =  {k: sorted_dictionary[k] for k in list(sorted_dictionary)[-30:]}
     # Use these to make sure that your x axis labels fit on the page
     plt.xticks(rotation=90)
     plt.tight_layout()
-    plt.ylim((0,25))
+    plt.ylim((0,6))
     
-    x_values = dictionary.keys()
-    y_values = dictionary.values()
+    x_values = first_thirty.keys()
+    y_values = first_thirty.values()
     plt.xlabel('Artist')
     plt.ylabel('# of Words')
     plt.title('Number of Words Associated with Each Artist')
-    plt.bar(x_values, y_values, color='orange')
+    plt.bar(x_values, y_values, color='pink')
 
     plt.show() 
+
+
+def histogram(cur, conn):
+    
+    artists = []
+    cur.execute('SELECT Songs.artist_id, Artists.Artist FROM Songs INNER JOIN Artists ON Songs.artist_id = Artists.artist_id')
+    for artist_id in cur:
+        artists.append(artist_id[1])
+    print(artists)
+    
+    plt.xticks(rotation=90)
+    plt.hist(artists, rwidth= 1)
+    plt.show()
+
 
 
 def graph_2(dictionary):
     pass
 
     
-    print(dictionary)
+    #print(dictionary)
     # Use these to make sure that your x axis labels fit on the page
     plt.xticks(rotation=90)
     plt.tight_layout()
-    plt.ylim((0,25))
+    plt.ylim((0,20))
     
-    x_values = dictionary.keys()
-    y_values = dictionary.values()
-    plt.xlabel('Artist')
-    plt.ylabel('# of Words')
-    plt.title('Number of Words Associated with Each Artist')
-    plt.bar(x_values, y_values, color='green')
+    first_hundred =  {k: dictionary[k] for k in list(dictionary)[:100]}
+   
+    
+    x_values = first_hundred.keys()
+    y_values = first_hundred.values()
+    plt.xlabel('Word')
+    plt.ylabel('# of Occurences')
+    plt.title('Number of Artists that Each Word Yields')
+    plt.xticks(fontsize = 5)
+    plt.bar(x_values, y_values, color=['purple', 'pink', 'red', 'orange', 'yellow'])
+
 
     plt.show() 
 
@@ -132,20 +156,26 @@ def main():
     #connect to database
     cur, conn = connectDatabase('booksandsongs.db')
     
-    x = words(cur, conn)
+    x = first_calc(cur, conn)
     y = second_calc(cur, conn)
 
 
-    with open('booksandsongs.csv', 'w') as f:  # Just use 'w' mode in 3.x
-        w = csv.DictWriter(f, x.keys())
-        w.writeheader()
-        w.writerow(x)
 
     
     
-    #graph_1(x)
+    graph_1(x)
     graph_2(y)
     second_calc(cur, conn)
+    #histogram(cur, conn)
+
+
+
+    with open('booksandsongs.csv', 'w') as f:  
+        w = csv.DictWriter(f, x.keys())
+        w.writeheader()
+        w.writerow(x)
+        
+
 
 if __name__ == "__main__":
     main()
